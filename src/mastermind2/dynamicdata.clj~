@@ -1,0 +1,8 @@
+(ns mastermind2.dynamicdata)
+
+(def current-guess (ref '[]))
+(def remaining-possible-codes (ref '[]))
+(def past-moves (ref {}))
+(def past-games (ref {}))
+
+(def current-move-number (ref 0))

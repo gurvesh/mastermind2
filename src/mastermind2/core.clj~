@@ -1,0 +1,84 @@
+(ns mastermind2.core)
+(require '[mastermind2.inputoutput :as io]
+         '[mastermind2.staticdata :as static]
+         '[mastermind2.dynamicdata :as dynamic]
+         '[clojure.set :as setfn])
+
+(declare start-new-game
+         next-move
+         end-current-game
+         filter-possibles)
+
+(defn -main []
+  (let [init-choice (io/get-choice (:start static/messages)
+                                   static/min-init-choice
+                                   static/max-init-choice)]
+    (cond
+     (= 2 init-choice) (start-new-game)
+     :else nil)))
+
+(defn start-new-game []
+  (println (:new-game static/messages))
+  
+  (dosync
+   (ref-set dynamic/current-guess static/first-guess)
+   (ref-set dynamic/remaining-possible-codes static/all-possible-codes)
+   (ref-set dynamic/past-moves {})
+   (ref-set dynamic/current-move-number 0))
+  
+  (println @dynamic/current-guess)
+  (next-move @dynamic/current-guess)
+  nil)
+
+(defn next-move [code]
+  (let [number-exact-matches (io/get-choice (:exact-matches static/messages)
+                                            static/min-guess
+                                            static/max-guess)
+        number-aprox-matches (io/get-choice (:approx-matches static/messages)
+                                            static/min-guess
+                                            static/max-guess)]
+    (cond 
+     (= number-exact-matches 4) (end-current-game @dynamic/current-move-number)
+     :else (do
+             (dosync
+              (alter dynamic/current-move-number inc)
+              
+              (alter dynamic/remaining-possible-codes 
+                     filter-possibles 
+                     @dynamic/current-guess 
+                     [number-exact-matches number-aprox-matches])
+              (ref-set dynamic/current-guess (first @dynamic/remaining-possible-codes)))
+            (println @dynamic/current-guess)
+            (recur @dynamic/current-guess)))))
+
+(defn end-current-game [move-number]
+  (io/get-choice (str (first (:game-over static/messages))
+                      move-number
+                      (second (:game-over static/messages)))
+                 1 2)
+  nil)
+
+(defn exact-matches [code test]
+  (->> (map = code test)
+       (filter true?)
+       (count)))
+
+(defn total-matches [code test]
+  (->> (merge-with min 
+                   (select-keys (frequencies code) test)
+                   (select-keys (frequencies test) code))
+       (vals)
+       (apply +)))
+
+(defn approx-matches [code test]
+  (- (total-matches code test)
+     (exact-matches code test)))
+
+(defn compare-code [code test]
+  (vector (exact-matches code test)
+          (approx-matches code test)))
+
+(defn filter-possibles [possibles code result]
+  (filter #(= result 
+              (compare-code code %))
+          possibles))
