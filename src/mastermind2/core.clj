@@ -28,16 +28,12 @@
   nil)
 
 (defn next-move [code]
-  (let [current-key (keyword (str @dynamic/current-move-number))
-        number-exact-matches (first
-                              (second
-                               (current-key @dynamic/past-moves)))
-        number-approx-matches (second
-                               (second
-                                (current-key @dynamic/past-moves)))
+  (let [current-key (keyword (str @dynamic/current-move-number))        
+        {[current-possibles [number-exact-matches 
+                             number-approx-matches]]
+         current-key} @dynamic/past-moves        
         remaining-possible-codes (filter-possibles
-                                  (first
-                                   (current-key @dynamic/past-moves))
+                                  current-possibles
                                   code
                                   [number-exact-matches
                                    number-approx-matches])]
